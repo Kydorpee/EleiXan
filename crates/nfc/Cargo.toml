@@ -1,0 +1,9 @@
+[package]
+name = "eleixan-nfc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "eleixan_nfc"
+path = "src/lib.rs"

@@ -1,0 +1,9 @@
+[package]
+name = "eleixan-apuracao"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "apurar"
+path = "src/main.rs"
