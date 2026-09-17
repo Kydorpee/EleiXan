@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>EleiXan - Guia de execucao e arquitetura</title>
+<style>
+@page { size: A4; margin: 18mm 17mm 18mm; }
+:root { --ink:#17212b; --muted:#536273; --blue:#155e75; --cyan:#e6f4f1; --line:#cbd5df; --warn:#fff3d6; --dark:#102a43; }
+* { box-sizing:border-box; }
+body { font-family: "Segoe UI", Arial, sans-serif; color:var(--ink); line-height:1.48; font-size:10.5pt; margin:0; }
+h1 { color:var(--dark); font-size:28pt; line-height:1.05; margin:0 0 9pt; }
+h2 { color:var(--blue); font-size:18pt; margin:22pt 0 8pt; border-bottom:2px solid var(--cyan); padding-bottom:4pt; }
+h3 { color:var(--dark); font-size:13pt; margin:14pt 0 5pt; }
+p { margin:5pt 0 8pt; }
+.cover { min-height:245mm; display:flex; flex-direction:column; justify-content:center; border-left:9px solid var(--blue); padding:25mm 18mm; background:linear-gradient(135deg,#f7fbfc,#e9f3f1); }
+.subtitle { color:var(--muted); font-size:15pt; max-width:125mm; }
+.meta { margin-top:25mm; color:var(--muted); }
+.badge { display:inline-block; background:var(--blue); color:white; padding:4pt 8pt; border-radius:4pt; font-size:9pt; margin-bottom:15pt; }
+.page { page-break-before:always; }
+.callout { padding:9pt 11pt; border-left:4px solid var(--blue); background:var(--cyan); margin:10pt 0; }
+.warning { padding:9pt 11pt; border-left:4px solid #c47b00; background:var(--warn); margin:10pt 0; }
+code { font-family:Consolas, monospace; background:#edf1f4; padding:1pt 3pt; border-radius:2pt; font-size:9.5pt; }
+pre { background:#102a43; color:#f3f7fa; padding:10pt 12pt; border-radius:5pt; white-space:pre-wrap; font:9.2pt Consolas, monospace; }
+table { width:100%; border-collapse:collapse; margin:8pt 0 12pt; }
+th { text-align:left; background:var(--dark); color:white; }
+th,td { border:1px solid var(--line); padding:6pt 7pt; vertical-align:top; }
+tr:nth-child(even) td { background:#f6f9fa; }
+ul,ol { margin-top:4pt; padding-left:20pt; }
+li { margin:4pt 0; }
+.small { color:var(--muted); font-size:9pt; }
+.flow { display:grid; grid-template-columns:1fr 1fr; gap:7pt; margin:10pt 0; }
+.flow div { border:1px solid var(--line); padding:8pt; border-radius:4pt; background:#fbfcfd; }
+footer { position:fixed; bottom:5mm; right:17mm; color:#718096; font-size:8pt; }
+</style>
+</head>
+<body>
+<footer>EleiXan | Guia de execucao e arquitetura</footer>
+<section class="cover">
+  <span class="badge">GUIA DO PROJETO</span>
+  <h1>EleiXan</h1>
+  <div class="subtitle">Como executar o workspace Rust e o que cada parte do projeto faz</div>
+  <p class="meta"><strong>Estado analisado:</strong> 17 de setembro de 2026<br><strong>Escopo:</strong> código presente neste repositório, com distinção entre arquitetura planejada e implementação atual.</p>
+</section>
+
+<section class="page">
+<h2>1. Resumo rápido</h2>
+<p>O EleiXan foi organizado como um workspace Rust para uma urna universitária offline. A proposta separa a identificação do eleitor, feita pela mesa, do registro anônimo do voto, feito pela urna.</p>
+<div class="callout"><strong>Ponto importante:</strong> a documentação descreve o sistema completo, mas o código atual ainda é uma prova de estrutura. Os módulos de criptografia, NFC, ledger e apuração ainda estão vazios.</div>
+<h3>O que existe hoje</h3>
+<ul>
+<li>Um workspace Cargo com cinco crates independentes.</li>
+<li>Dois executáveis: <code>urna</code> e <code>apurar</code>.</li>
+<li>Três bibliotecas preparadas para receber a lógica: <code>core</code>, <code>nfc</code> e <code>mesa</code>.</li>
+<li>Documentação inicial de arquitetura, fluxo, casos de uso e hardware.</li>
+</ul>
+<h3>O que ainda não existe no código</h3>
+<ul>
+<li>Leitura ou gravação real de NFC, PN532 ou NTAG215.</li>
+<li>Geração de UUID, HMAC-SHA256, hash chain, Ed25519 ou persistência em sled.</li>
+<li>Interface de votação, simulação de eleitores, lote de votos e verificação de ledger.</li>
+<li>Integração com Raspberry Pi ou Solana Devnet.</li>
+</ul>
+</section>
+
+<section class="page">
+<h2>2. Como preparar o ambiente</h2>
+<h3>2.1 Instalar Rust</h3>
+<p>No Windows, instale o Rust pelo instalador oficial <strong>rustup</strong>. Durante a instalação, aceite as opções padrão. Depois feche e abra o terminal novamente.</p>
+<pre>rustup --version
+rustc --version
+cargo --version</pre>
+<p>O primeiro comando confirma o gerenciador; os dois seguintes confirmam o compilador e o Cargo. Se aparecer “comando não reconhecido”, o Rust ainda não está no <code>PATH</code> daquele terminal.</p>
+<h3>2.2 Entrar na pasta do projeto</h3>
+<pre>cd "C:\Users\Pedro\Desktop\Desenvolvimento\Aulas_Faculdade\EleiXan\EleiXan"
+Get-ChildItem</pre>
+<p>Você deve ver <code>Cargo.toml</code>, <code>README.md</code> e a pasta <code>crates</code>.</p>
+<h3>2.3 Compilar o workspace</h3>
+<pre>cargo check
+cargo build</pre>
+<p><code>cargo check</code> verifica rapidamente o código sem produzir um executável final. <code>cargo build</code> compila os artefatos. Para uma compilação otimizada, acrescente <code>--release</code>.</p>
+</section>
+
+<section class="page">
+<h2>3. Executar o que já está implementado</h2>
+<h3>3.1 Rodar a urna</h3>
+<pre>cargo run -p eleixan-urna</pre>
+<p>Saída esperada:</p>
+<pre>EleiXan urna: modo simulacao ainda nao implementado</pre>
+<p>O pacote se chama <code>eleixan-urna</code>, mas o binário se chama <code>urna</code>. A opção <code>-p</code> escolhe o pacote do workspace.</p>
+<h3>3.2 Rodar a apuração</h3>
+<pre>cargo run -p eleixan-apuracao</pre>
+<p>Saída esperada:</p>
+<pre>EleiXan apuracao: verificador ainda nao implementado</pre>
+<h3>3.3 Compilar e executar em modo release</h3>
+<pre>cargo build --release
+cargo run --release -p eleixan-urna
+cargo run --release -p eleixan-apuracao</pre>
+<div class="warning"><strong>Atenção ao README:</strong> os comandos <code>cargo run --release -- --mock-nfc --voters 870</code> e <code>cargo run --release --bin apurar ...</code> descrevem uma implementação futura. Hoje não há parser dessas opções nem um binário raiz com esse nome. Use os comandos desta seção.</div>
+</section>
+
+<section class="page">
+<h2>4. O que cada arquivo faz</h2>
+<table>
+<tr><th>Local</th><th>Função atual</th><th>Função planejada</th></tr>
+<tr><td><code>Cargo.toml</code></td><td>Declara o workspace e lista os cinco membros.</td><td>Centralizar versão, edição Rust 2021 e licença.</td></tr>
+<tr><td><code>crates/core</code></td><td>Biblioteca vazia, com comentário de intenção.</td><td>Regras criptográficas, commitments, blocos e persistência do ledger.</td></tr>
+<tr><td><code>crates/nfc</code></td><td>Biblioteca vazia.</td><td>Driver PN532, NTAG215, wipe e LEDs.</td></tr>
+<tr><td><code>crates/mesa</code></td><td>Biblioteca vazia.</td><td>Emissão off-chain de tokens anônimos com HMAC.</td></tr>
+<tr><td><code>crates/urna/src/main.rs</code></td><td>Imprime que a simulação ainda não foi implementada.</td><td>Executar o fluxo da cabine e registrar votos.</td></tr>
+<tr><td><code>crates/apuracao/src/main.rs</code></td><td>Imprime que o verificador ainda não foi implementado.</td><td>Reconstruir a cadeia e conferir assinaturas.</td></tr>
+<tr><td><code>docs/</code></td><td>Área reservada para documentação técnica.</td><td>SDD, ameaças, auditoria e decisões de arquitetura.</td></tr>
+<tr><td><code>hardware/</code></td><td>README reservado para hardware.</td><td>Esquemas, lista de materiais e montagem.</td></tr>
+<tr><td><code>scripts/</code></td><td>README reservado para scripts.</td><td>Simulação de ataques, carga e QA.</td></tr>
+</table>
+</section>
+
+<section class="page">
+<h2>5. Arquitetura planejada, passo a passo</h2>
+<div class="flow">
+<div><strong>1. Mesa</strong><br>Valida a matrícula no registro local e emite um token descartável. A identidade não deve ser gravada no token.</div>
+<div><strong>2. Token</strong><br>O desenho prevê UUID v4 e assinatura HMAC-SHA256 armazenados em uma tag NTAG215.</div>
+<div><strong>3. Urna</strong><br>O leitor PN532 valida o token e verifica se ele já foi usado. Um HashSet representa o controle de uso único.</div>
+<div><strong>4. Voto</strong><br>O voto deve virar um commitment com SHA-256 e salt, sem transportar a identidade do eleitor.</div>
+<div><strong>5. Ledger</strong><br>Os blocos planejados encadeiam o hash anterior e recebem assinatura Ed25519 da urna.</div>
+<div><strong>6. Reset</strong><br>A tag deve ser zerada e relida. LED verde indica sucesso; LED vermelho indica falha.</div>
+<div><strong>7. Apuração</strong><br>O cartão SD é levado ao apurador, que reconstrói a cadeia e verifica assinaturas.</div>
+<div><strong>8. Prova pública</strong><br>Opcionalmente, o hash final pode ser ancorado na Solana Devnet.</div>
+</div>
+<h3>Por que o batch é mencionado?</h3>
+<p>A proposta mantém commitments temporariamente em RAM e grava em lotes, por exemplo a cada dez votos ou após um intervalo aleatório. Isso tenta dificultar a correlação entre a ordem de chegada à cabine e a ordem dos blocos. Esse mecanismo é descrito no README, mas ainda não foi implementado.</p>
+</section>
+
+<section class="page">
+<h2>6. Como interpretar o estado do projeto</h2>
+<h3>Comandos úteis</h3>
+<pre>cargo test
+cargo tree
+cargo metadata --no-deps</pre>
+<p>Hoje, <code>cargo test</code> provavelmente termina sem testes executáveis porque não existem testes declarados. <code>cargo tree</code> mostra que os crates ainda não têm dependências externas. <code>cargo metadata --no-deps</code> exibe a estrutura formal do workspace.</p>
+<h3>Limitações atuais</h3>
+<ul>
+<li>O projeto compila apenas depois que o toolchain Rust estiver instalado.</li>
+<li>A documentação é mais avançada que a implementação.</li>
+<li>Não é possível realizar uma eleição real ou uma simulação completa nesta versão.</li>
+<li>Não conecte hardware nem use dados reais esperando que o sistema os processe.</li>
+</ul>
+<div class="callout"><strong>Resumo:</strong> para apresentar o estado atual, rode <code>cargo check</code>, depois os dois comandos <code>cargo run -p ...</code>. Eles comprovam que a estrutura do workspace está criada, enquanto as mensagens de saída deixam claro o que ainda falta.</div>
+</section>
+
+<section class="page">
+<h2>7. Próximos passos recomendados</h2>
+<ol>
+<li>Adicionar testes unitários para hashing, tokens e validação de uso único.</li>
+<li>Implementar o modelo de dados do ledger em <code>core</code> antes de conectar hardware.</li>
+<li>Criar um driver NFC simulado em <code>nfc</code> para permitir testes sem Raspberry Pi.</li>
+<li>Implementar a mesa e a urna usando traits, mantendo o modo mock separado do PN532 real.</li>
+<li>Implementar o binário de apuração e testes de adulteração de blocos.</li>
+<li>Atualizar o README quando os comandos descritos passarem a existir.</li>
+</ol>
+<h3>Conclusão</h3>
+<p>O repositório já estabelece a divisão de responsabilidades e a estrutura modular de uma urna offline. O próximo trabalho é transformar cada comentário de intenção em uma API testável, começando pelo núcleo criptográfico e pelo modo simulado.</p>
+<p class="small">Documento gerado a partir da leitura do código e da documentação presentes no workspace EleiXan.</p>
+</section>
+</body>
+</html>
