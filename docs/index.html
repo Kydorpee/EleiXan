@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EleiXan Terminal — Protótipo piloto</title>
+<meta name="description" content="Protótipo interativo do fluxo de votação do EleiXan: mesa emite chave, urna valida e coleta o voto, extrato de votação e blockchain local auditável.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#f3f1fb;
+    --surface:#ffffff;
+    --surface-2:#f8f7fd;
+    --border:#e2ddf2;
+    --text:#1c1a2e;
+    --text-muted:#6b6680;
+    --primary:#5b21d6;
+    --primary-hover:#4a1ab3;
+    --primary-contrast:#ffffff;
+    --primary-tint:#efe9fd;
+    --success:#178a4c;
+    --success-bg:#e3f7ec;
+    --danger:#c1272d;
+    --danger-bg:#fceaea;
+    --neutral-bg:#eeecf7;
+    --shadow:0 1px 2px rgba(28,26,46,.06), 0 8px 24px -12px rgba(28,26,46,.18);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#100e1c;
+      --surface:#1a1730;
+      --surface-2:#201c3a;
+      --border:#332d54;
+      --text:#ece9fb;
+      --text-muted:#a29cc4;
+      --primary:#a082ff;
+      --primary-hover:#b598ff;
+      --primary-contrast:#140f2b;
+      --primary-tint:#241f42;
+      --success:#34d399;
+      --success-bg:#123024;
+      --danger:#f87171;
+      --danger-bg:#3a1414;
+      --neutral-bg:#241f3d;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#100e1c;
+    --surface:#1a1730;
+    --surface-2:#201c3a;
+    --border:#332d54;
+    --text:#ece9fb;
+    --text-muted:#a29cc4;
+    --primary:#a082ff;
+    --primary-hover:#b598ff;
+    --primary-contrast:#140f2b;
+    --primary-tint:#241f42;
+    --success:#34d399;
+    --success-bg:#123024;
+    --danger:#f87171;
+    --danger-bg:#3a1414;
+    --neutral-bg:#241f3d;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; }
+  img{ max-width:100%; }
+  [hidden]{ display:none !important; }
+  body{
+    background:
+      radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--text) 6%, transparent) 1px, transparent 1.6px) 0 0/22px 22px,
+      var(--bg);
+    color:var(--text);
+    font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .mono{ font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  .page{
+    max-width:960px;
+    margin:0 auto;
+    padding:20px 16px 64px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:10px;
+    background:var(--primary); color:var(--primary-contrast);
+    display:flex; align-items:center; justify-content:center;
+    font-family:"IBM Plex Mono", monospace; font-weight:600; font-size:.95rem;
+    flex:none;
+  }
+  .brand-name{ font-weight:700; font-size:1.05rem; line-height:1.15; }
+  .brand-sub{ font-size:.72rem; color:var(--text-muted); letter-spacing:.02em; }
+
+  .tabs{
+    display:flex; gap:4px; padding:4px; background:var(--surface-2);
+    border:1px solid var(--border); border-radius:999px;
+  }
+  .tab{
+    appearance:none; border:0; background:transparent; color:var(--text-muted);
+    font:inherit; font-weight:600; font-size:.82rem; padding:8px 16px;
+    border-radius:999px; cursor:pointer;
+  }
+  .tab.active{ background:var(--primary); color:var(--primary-contrast); }
+
+  /* ---------- generic ---------- */
+  .view{ display:flex; flex-direction:column; gap:16px; }
+  .view[hidden]{ display:none; }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:20px;
+  }
+  .card-header{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .card-title{ font-weight:700; font-size:1rem; }
+  .card-hint{ font-size:.78rem; color:var(--text-muted); }
+
+  .field-label{ display:block; font-size:.75rem; font-weight:600; color:var(--text-muted); margin-bottom:6px; letter-spacing:.01em; }
+  input[type="text"], input[type="url"], input[type="number"]{
+    width:100%; padding:11px 13px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text); font:inherit; font-size:.92rem;
+  }
+  input:focus-visible, button:focus-visible, .tab:focus-visible{
+    outline:2px solid var(--primary); outline-offset:2px;
+  }
+  input.mono{ font-size:.88rem; }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .row > *{ flex:1 1 160px; }
+
+  .btn{
+    appearance:none; border:1px solid transparent; border-radius:10px;
+    font:inherit; font-weight:600; font-size:.88rem; padding:11px 18px;
+    cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    white-space:nowrap;
+  }
+  .btn-primary{ background:var(--primary); color:var(--primary-contrast); }
+  .btn-primary:hover{ background:var(--primary-hover); }
+  .btn-ghost{ background:var(--surface-2); color:var(--text); border-color:var(--border); }
+  .btn-ghost:hover{ background:var(--neutral-bg); }
+  .btn-danger{ background:transparent; color:var(--danger); border-color:color-mix(in srgb, var(--danger) 40%, transparent); }
+  .btn-danger:hover{ background:var(--danger-bg); }
+  .btn-block{ width:100%; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .pill{
+    display:inline-flex; align-items:center; gap:6px; padding:4px 10px;
+    border-radius:999px; font-size:.72rem; font-weight:700; letter-spacing:.02em;
+  }
+  .pill-neutral{ background:var(--neutral-bg); color:var(--text-muted); }
+  .pill-success{ background:var(--success-bg); color:var(--success); }
+  .pill-danger{ background:var(--danger-bg); color:var(--danger); }
+  .pill::before{ content:""; width:6px; height:6px; border-radius:999px; background:currentColor; }
+
+  .banner{ border-radius:12px; padding:14px 16px; font-size:.88rem; display:flex; gap:10px; align-items:flex-start; }
+  .banner-danger{ background:var(--danger-bg); color:var(--danger); }
+  .banner-success{ background:var(--success-bg); color:var(--success); }
+  .banner[hidden]{ display:none; }
+
+  .hash{
+    display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; font-size:.78rem; color:var(--text-muted);
+  }
+
+  table{ width:100%; border-collapse:collapse; font-size:.85rem; }
+  th, td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  th{ font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); font-weight:700; }
+  tbody tr:last-child td{ border-bottom:0; }
+  .table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:12px; }
+  .table-wrap table{ min-width:480px; }
+  .table-wrap .card-header{ padding:14px 14px 0; }
+
+  .empty-row td{ color:var(--text-muted); text-align:center; padding:22px 10px; }
+
+  .avatar{
+    width:40px; height:40px; border-radius:10px; flex:none; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:.8rem; color:#fff; background:var(--primary);
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+
+  .section-note{ font-size:.78rem; color:var(--text-muted); line-height:1.5; }
+
+  /* ---------- urna kiosk ---------- */
+  .kiosk{
+    background:var(--surface); border:1px solid var(--border); border-radius:18px;
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+  .kiosk-head{
+    padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--border); background:var(--surface-2); gap:10px; flex-wrap:wrap;
+  }
+  .kiosk-head-title{ font-weight:700; font-size:.9rem; }
+  .kiosk-body{ padding:28px 24px; display:flex; flex-direction:column; gap:16px; align-items:stretch; }
+  .kiosk-step{ display:flex; flex-direction:column; gap:16px; }
+  .kiosk-step[hidden]{ display:none; }
+  .kiosk-title{ font-size:1.15rem; font-weight:700; text-wrap:balance; }
+  .kiosk-sub{ font-size:.85rem; color:var(--text-muted); }
+  .kiosk-icon{
+    width:52px; height:52px; border-radius:14px; background:var(--primary-tint); color:var(--primary);
+    display:flex; align-items:center; justify-content:center; font-size:1.3rem; font-weight:700;
+  }
+
+  .candidate-card{
+    display:flex; gap:14px; align-items:center; padding:14px; border:1px solid var(--border);
+    border-radius:12px; background:var(--surface-2);
+  }
+  .candidate-card .avatar{ width:56px; height:56px; border-radius:12px; font-size:1rem; }
+  .candidate-name{ font-weight:700; font-size:1rem; }
+  .candidate-role{ font-size:.8rem; color:var(--text-muted); }
+  .candidate-number{ font-family:"IBM Plex Mono", monospace; font-size:.78rem; color:var(--text-muted); margin-top:2px; }
+
+  .code-box{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  }
+  .code-box input{ flex:1 1 220px; }
+
+  .bar-row{ display:flex; align-items:center; gap:10px; font-size:.82rem; }
+  .bar-row .bar-label{ width:150px; flex:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-track{ flex:1; height:10px; border-radius:999px; background:var(--neutral-bg); overflow:hidden; }
+  .bar-fill{ height:100%; background:var(--primary); border-radius:999px; }
+  .bar-count{ width:34px; text-align:right; flex:none; font-variant-numeric:tabular-nums; color:var(--text-muted); }
+
+  .stat-row{ display:flex; gap:12px; flex-wrap:wrap; }
+  .stat{ flex:1 1 140px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+  .stat-value{ font-size:1.4rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .stat-label{ font-size:.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+
+  form.inline-form{ display:flex; flex-direction:column; gap:12px; padding-top:6px; border-top:1px dashed var(--border); margin-top:4px; }
+  form.inline-form[hidden]{ display:none; }
+
+  footer.page-footer{ text-align:center; font-size:.74rem; color:var(--text-muted); padding-top:8px; }
+  footer.page-footer a{ color:var(--primary); }
+
+  @media (max-width:560px){
+    .kiosk-body{ padding:20px 16px; }
+    .card{ padding:16px; }
+    .bar-row .bar-label{ width:100px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">Ex</div>
+      <div>
+        <div class="brand-name">EleiXan</div>
+        <div class="brand-sub">Protótipo piloto &middot; modo simulação, sem hardware</div>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="urna" id="tabbtn-urna" role="tab" aria-selected="true">Urna</button>
+      <button class="tab" data-tab="mesa" id="tabbtn-mesa" role="tab" aria-selected="false">Mesa &amp; Painel</button>
+    </div>
+  </header>
+
+  <!-- ===================== URNA (VOTER FLOW) ===================== -->
+  <section class="view active" id="view-urna">
+    <div class="kiosk">
+      <div class="kiosk-head">
+        <div class="kiosk-head-title">Terminal de votação</div>
+        <span class="pill pill-neutral" id="urna-status-pill">Aguardando chave</span>
+      </div>
+      <div class="kiosk-body">
+
+        <!-- step 1: insert key -->
+        <div class="kiosk-step" id="step-key">
+          <div class="kiosk-icon">01</div>
+          <div>
+            <div class="kiosk-title">Insira a chave de votação</div>
+            <div class="kiosk-sub">Cole ou digite o código recebido do mesário para liberar o voto.</div>
+          </div>
+          <div>
+            <label class="field-label" for="input-key">Chave de votação</label>
+            <input type="text" id="input-key" class="mono" placeholder="ex: 3f9e21a0-....d92c.a1b2c3d4" autocomplete="off">
+          </div>
+          <div class="banner banner-danger" id="key-error" hidden></div>
+          <button class="btn btn-primary btn-block" id="btn-validate-key">Validar chave</button>
+        </div>
+
+        <!-- step 2: vote -->
+        <div class="kiosk-step" id="step-vote" hidden>
+          <div class="kiosk-icon">02</div>
+          <div>
+            <div class="kiosk-title">Digite o número do candidato</div>
+            <div class="kiosk-sub">Este terminal está liberado para 1 voto com a chave informada.</div>
+          </div>
+          <div>
+            <label class="field-label" for="input-candidate">Número do candidato</label>
+            <input type="text" id="input-candidate" class="mono" inputmode="numeric" placeholder="ex: 10" autocomplete="off">
+          </div>
+          <div class="banner banner-danger" id="candidate-error" hidden></div>
+
+          <div class="candidate-card" id="candidate-preview" hidden>
+            <div class="avatar" id="candidate-avatar"></div>
+            <div style="flex:1;">
+              <div class="candidate-name" id="candidate-name"></div>
+              <div class="candidate-role" id="candidate-role"></div>
+              <div class="candidate-number" id="candidate-number"></div>
+            </div>
+          </div>
+
+          <div class="row">
+            <button class="btn btn-ghost" id="btn-search-candidate">Buscar candidato</button>
+            <button class="btn btn-primary" id="btn-confirm-vote" hidden>Confirmar voto</button>
+          </div>
+          <button class="btn btn-ghost btn-block" id="btn-cancel-vote">Cancelar e devolver chave</button>
+        </div>
+
+        <!-- step 3: confirmed -->
+        <div class="kiosk-step" id="step-confirmed" hidden>
+          <div class="kiosk-icon" style="background:var(--success-bg); color:var(--success);">OK</div>
+          <div>
+            <div class="kiosk-title">Voto confirmado</div>
+            <div class="kiosk-sub">O voto foi registrado na blockchain local como um compromisso criptográfico.</div>
+          </div>
+          <div class="banner banner-success">Voto registrado com sucesso. A chave utilizada foi invalidada.</div>
+          <div class="section-note mono" id="confirmed-block-info"></div>
+          <button class="btn btn-primary btn-block" id="btn-finish-vote">Concluir e liberar terminal</button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MESA / PAINEL (ADMIN) ===================== -->
+  <section class="view" id="view-mesa" hidden>
+
+    <!-- emitir chave -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Emitir chave de votação</div>
+          <div class="card-hint">Simula a mesa gerando um token descartável (UUID assinado com HMAC-SHA256) para entregar ao eleitor.</div>
+        </div>
+        <button class="btn btn-primary" id="btn-generate-key">Gerar nova chave</button>
+      </div>
+
+      <div id="generated-key-box" hidden>
+        <label class="field-label">Chave gerada — entregue ao eleitor</label>
+        <div class="code-box">
+          <input type="text" id="generated-key-value" class="mono" readonly>
+          <button class="btn btn-ghost" id="btn-copy-key">Copiar</button>
+        </div>
+        <div class="section-note" id="copy-feedback" style="margin-top:6px;"></div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:16px;">
+        <div class="card-header"><div class="card-title" style="font-size:.85rem;">Chaves emitidas nesta sessão</div></div>
+        <table>
+          <thead><tr><th>Chave</th><th>Emitida em</th><th>Status</th></tr></thead>
+          <tbody id="keys-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- candidatos -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Candidatos cadastrados</div>
+          <div class="card-hint">Cadastro rápido para testar o fluxo de votação. Dados de exemplo — edite como quiser.</div>
+        </div>
+        <button class="btn btn-ghost" id="btn-toggle-candidate-form">+ Cadastrar candidato</button>
+      </div>
+
+      <form class="inline-form" id="candidate-form" hidden>
+        <div class="row">
+          <div>
+            <label class="field-label" for="cand-number">Número</label>
+            <input type="text" id="cand-number" class="mono" inputmode="numeric" placeholder="10">
+          </div>
+          <div style="flex:2 1 220px;">
+            <label class="field-label" for="cand-name">Nome / chapa</label>
+            <input type="text" id="cand-name" placeholder="Nome do candidato ou chapa">
+          </div>
+        </div>
+        <div class="row">
+          <div style="flex:2 1 220px;">
+            <label class="field-label" for="cand-role">Cargo</label>
+            <input type="text" id="cand-role" placeholder="ex: Presidente do Centro Acadêmico">
+          </div>
+          <div>
+            <label class="field-label" for="cand-photo">Foto (URL, opcional)</label>
+            <input type="url" id="cand-photo" placeholder="https://...">
+          </div>
+        </div>
+        <div class="banner banner-danger" id="candidate-form-error" hidden></div>
+        <div class="row" style="flex-wrap:nowrap;">
+          <button type="submit" class="btn btn-primary">Salvar candidato</button>
+          <button type="button" class="btn btn-ghost" id="btn-cancel-candidate-form">Cancelar</button>
+        </div>
+      </form>
+
+      <div class="table-wrap" style="margin-top:14px;">
+        <table>
+          <thead><tr><th></th><th>Número</th><th>Nome</th><th>Cargo</th><th></th></tr></thead>
+          <tbody id="candidates-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- extrato -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Extrato de votação</div>
+          <div class="card-hint">Apuração simulada: reabre os compromissos criptográficos com o salt de cada bloco para contar os votos.</div>
+        </div>
+      </div>
+
+      <div class="stat-row" style="margin-bottom:16px;">
+        <div class="stat">
+          <div class="stat-value" id="stat-total-votes">0</div>
+          <div class="stat-label">Votos registrados</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-total-keys">0</div>
+          <div class="stat-label">Chaves emitidas</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-total-candidates">0</div>
+          <div class="stat-label">Candidatos</div>
+        </div>
+      </div>
+
+      <div id="tally-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+      <div class="table-wrap" style="margin-top:16px;">
+        <div class="card-header"><div class="card-title" style="font-size:.85rem;">Votos individuais (sem vínculo com o eleitor)</div></div>
+        <table>
+          <thead><tr><th>Bloco</th><th>Horário</th><th>Candidato</th></tr></thead>
+          <tbody id="votes-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- blockchain -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Blockchain local (ledger)</div>
+          <div class="card-hint">Cada bloco guarda apenas o compromisso do voto (hash) e a assinatura da urna — nunca o candidato em texto claro.</div>
+        </div>
+        <div class="row" style="flex:none; width:auto;">
+          <button class="btn btn-ghost" id="btn-verify-chain">Verificar integridade</button>
+        </div>
+      </div>
+      <div class="banner" id="chain-status" hidden></div>
+
+      <div class="table-wrap" style="margin-top:12px;">
+        <table>
+          <thead><tr><th>#</th><th>Horário</th><th>Hash anterior</th><th>Compromisso</th><th>Hash do bloco</th></tr></thead>
+          <tbody id="ledger-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="section-note" style="margin-top:14px; padding-top:14px; border-top:1px dashed var(--border);">
+        Ferramenta de teste — simula um ataque para demonstrar que a cadeia detecta adulteração (UC-08).
+        <div style="margin-top:8px;">
+          <button class="btn btn-danger" id="btn-tamper-chain">Simular adulteração de bloco</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--surface-2);">
+      <div class="card-header" style="margin-bottom:0;">
+        <div>
+          <div class="card-title" style="font-size:.85rem;">Reiniciar simulação</div>
+          <div class="card-hint">Apaga chaves, votos e a blockchain local deste navegador (mantém os candidatos).</div>
+        </div>
+        <button class="btn btn-danger" id="btn-reset-sim">Reiniciar</button>
+      </div>
+    </div>
+
+  </section>
+
+  <footer class="page-footer">
+    EleiXan &middot; protótipo estático para testes &middot; dados salvos apenas no seu navegador (localStorage)
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "eleixan_proto_v1";
+  var STATION_SECRET = "mesa-demo-key-nao-usar-em-producao";
+  var URNA_SECRET = "urna-demo-key-nao-usar-em-producao";
+
+  function defaultState(){
+    return {
+      candidates: [
+        { number:"10", name:"Chapa Renovação", role:"Presidente do Centro Acadêmico", photo:"" },
+        { number:"20", name:"Chapa União Estudantil", role:"Presidente do Centro Acadêmico", photo:"" },
+        { number:"30", name:"Chapa Avança", role:"Presidente do Centro Acadêmico", photo:"" }
+      ],
+      tokens: [],
+      ledger: []
+    };
+  }
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      if(!parsed || !Array.isArray(parsed.candidates)) return defaultState();
+      parsed.tokens = parsed.tokens || [];
+      parsed.ledger = parsed.ledger || [];
+      return parsed;
+    }catch(e){
+      return defaultState();
+    }
+  }
+
+  function saveState(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ /* ignore */ }
+  }
+
+  var state = loadState();
+
+  // ---------- crypto helpers ----------
+  function bufToHex(buf){
+    var bytes = new Uint8Array(buf);
+    var hex = "";
+    for(var i=0;i<bytes.length;i++){ hex += bytes[i].toString(16).padStart(2,"0"); }
+    return hex;
+  }
+
+  async function sha256(msg){
+    var enc = new TextEncoder().encode(msg);
+    var digest = await crypto.subtle.digest("SHA-256", enc);
+    return bufToHex(digest);
+  }
+
+  async function hmacSha256(key, msg){
+    var enc = new TextEncoder();
+    var cryptoKey = await crypto.subtle.importKey(
+      "raw", enc.encode(key), { name:"HMAC", hash:"SHA-256" }, false, ["sign"]
+    );
+    var sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(msg));
+    return bufToHex(sig);
+  }
+
+  function randomHex(bytes){
+    var arr = new Uint8Array(bytes);
+    crypto.getRandomValues(arr);
+    return bufToHex(arr);
+  }
+
+  function truncateHash(h){
+    if(!h) return "";
+    return h.slice(0,10) + "…" + h.slice(-8);
+  }
+
+  // ---------- DOM helpers ----------
+  function $(id){ return document.getElementById(id); }
+  function el(tag, cls, text){
+    var e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  // ---------- tabs ----------
+  var tabButtons = document.querySelectorAll(".tab");
+  tabButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      tabButtons.forEach(function(b){ b.classList.remove("active"); b.setAttribute("aria-selected","false"); });
+      btn.classList.add("active");
+      btn.setAttribute("aria-selected","true");
+      var target = btn.getAttribute("data-tab");
+      $("view-urna").hidden = target !== "urna";
+      $("view-mesa").hidden = target !== "mesa";
+      if(target === "mesa") renderMesa();
+    });
+  });
+
+  // ============================================================
+  // URNA FLOW
+  // ============================================================
+  var activeToken = null;   // token object currently validated on this terminal
+  var activeCandidate = null;
+
+  function setUrnaStatus(text, kind){
+    var pill = $("urna-status-pill");
+    pill.textContent = text;
+    pill.className = "pill " + (kind || "pill-neutral");
+  }
+
+  function showStep(id){
+    ["step-key","step-vote","step-confirmed"].forEach(function(s){
+      $(s).hidden = (s !== id);
+    });
+  }
+
+  function resetUrna(){
+    activeToken = null;
+    activeCandidate = null;
+    $("input-key").value = "";
+    $("input-candidate").value = "";
+    $("key-error").hidden = true;
+    $("candidate-error").hidden = true;
+    $("candidate-preview").hidden = true;
+    $("btn-confirm-vote").hidden = true;
+    showStep("step-key");
+    setUrnaStatus("Aguardando chave", "pill-neutral");
+  }
+
+  function showKeyError(msg){
+    var box = $("key-error");
+    box.textContent = msg;
+    box.hidden = false;
+  }
+
+  $("btn-validate-key").addEventListener("click", async function(){
+    var raw = $("input-key").value.trim();
+    $("key-error").hidden = true;
+    if(!raw){ showKeyError("Digite ou cole uma chave para continuar."); return; }
+
+    var parts = raw.split(".");
+    var code = parts[0];
+    var signature = parts[1];
+
+    var token = state.tokens.find(function(t){ return t.code === code; });
+    if(!token){
+      showKeyError("Chave não reconhecida por este terminal. Verifique o código com o mesário.");
+      return;
+    }
+    var expectedSig = await hmacSha256(STATION_SECRET, code);
+    if(!signature || expectedSig.slice(0,8) !== signature){
+      showKeyError("Assinatura da chave é inválida. O token pode estar corrompido.");
+      return;
+    }
+    if(token.used){
+      showKeyError("Esta chave já foi utilizada. Acesso negado para um novo voto.");
+      return;
+    }
+
+    activeToken = token;
+    showStep("step-vote");
+    setUrnaStatus("Voto em andamento", "pill-success");
+  });
+
+  $("input-key").addEventListener("keydown", function(e){
+    if(e.key === "Enter") $("btn-validate-key").click();
+  });
+
+  function showCandidateError(msg){
+    var box = $("candidate-error");
+    box.textContent = msg;
+    box.hidden = false;
+  }
+
+  function renderCandidatePreview(cand){
+    $("candidate-name").textContent = cand.name;
+    $("candidate-role").textContent = cand.role;
+    $("candidate-number").textContent = "Número " + cand.number;
+    var avatar = $("candidate-avatar");
+    avatar.innerHTML = "";
+    if(cand.photo){
+      var img = document.createElement("img");
+      img.src = cand.photo;
+      img.alt = cand.name;
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = initials(cand.name);
+    }
+    $("candidate-preview").hidden = false;
+    $("btn-confirm-vote").hidden = false;
+  }
+
+  function initials(name){
+    return (name || "?").trim().split(/\s+/).slice(0,2).map(function(w){ return w[0]; }).join("").toUpperCase();
+  }
+
+  $("btn-search-candidate").addEventListener("click", function(){
+    $("candidate-error").hidden = true;
+    $("candidate-preview").hidden = true;
+    $("btn-confirm-vote").hidden = true;
+    var number = $("input-candidate").value.trim();
+    if(!number){ showCandidateError("Digite o número do candidato."); return; }
+    var cand = state.candidates.find(function(c){ return c.number === number; });
+    if(!cand){ showCandidateError("Candidato não encontrado. Verifique o número digitado."); activeCandidate = null; return; }
+    activeCandidate = cand;
+    renderCandidatePreview(cand);
+  });
+
+  $("input-candidate").addEventListener("keydown", function(e){
+    if(e.key === "Enter") $("btn-search-candidate").click();
+  });
+
+  $("btn-cancel-vote").addEventListener("click", resetUrna);
+
+  $("btn-confirm-vote").addEventListener("click", async function(){
+    if(!activeToken || !activeCandidate) return;
+    $("btn-confirm-vote").disabled = true;
+
+    var prevBlock = state.ledger[state.ledger.length - 1];
+    var index = state.ledger.length;
+    var prevHash = prevBlock ? prevBlock.hash : "0".repeat(64);
+    var salt = randomHex(16);
+    var timestamp = new Date().toISOString();
+    var commitment = await sha256(activeCandidate.number + "|" + salt);
+    var signature = await hmacSha256(URNA_SECRET, index + "|" + prevHash + "|" + commitment);
+    var hash = await sha256(index + "|" + prevHash + "|" + commitment + "|" + signature + "|" + timestamp);
+
+    var block = {
+      index: index,
+      prevHash: prevHash,
+      timestamp: timestamp,
+      candidateNumber: activeCandidate.number,
+      salt: salt,
+      commitment: commitment,
+      signature: signature,
+      hash: hash
+    };
+    state.ledger.push(block);
+    activeToken.used = true;
+    activeToken.usedAt = timestamp;
+    saveState();
+
+    $("confirmed-block-info").textContent = "Bloco #" + index + " · hash " + truncateHash(hash);
+    showStep("step-confirmed");
+    setUrnaStatus("Voto confirmado", "pill-success");
+    $("btn-confirm-vote").disabled = false;
+  });
+
+  $("btn-finish-vote").addEventListener("click", function(){
+    resetUrna();
+    renderMesa();
+  });
+
+  // ============================================================
+  // MESA / PAINEL (ADMIN)
+  // ============================================================
+
+  $("btn-generate-key").addEventListener("click", async function(){
+    var code = crypto.randomUUID();
+    var sigFull = await hmacSha256(STATION_SECRET, code);
+    var sig = sigFull.slice(0,8);
+    var fullKey = code + "." + sig;
+
+    state.tokens.push({ code: code, sig: sig, used:false, createdAt: new Date().toISOString() });
+    saveState();
+
+    $("generated-key-box").hidden = false;
+    $("generated-key-value").value = fullKey;
+    $("copy-feedback").textContent = "";
+    renderKeysTable();
+  });
+
+  $("btn-copy-key").addEventListener("click", async function(){
+    var value = $("generated-key-value").value;
+    var feedback = $("copy-feedback");
+    try{
+      await navigator.clipboard.writeText(value);
+      feedback.textContent = "Chave copiada para a área de transferência.";
+    }catch(e){
+      var input = $("generated-key-value");
+      input.focus();
+      input.select();
+      feedback.textContent = "Não foi possível copiar automaticamente. O campo foi selecionado — use Ctrl+C.";
+    }
+  });
+
+  function renderKeysTable(){
+    var body = $("keys-table-body");
+    body.innerHTML = "";
+    if(state.tokens.length === 0){
+      var tr = el("tr","empty-row");
+      var td = el("td", null, "Nenhuma chave emitida ainda.");
+      td.colSpan = 3;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    state.tokens.slice().reverse().forEach(function(t){
+      var tr = document.createElement("tr");
+
+      var tdCode = el("td");
+      var span = el("span","hash mono", t.code + "." + t.sig);
+      span.style.maxWidth = "220px";
+      tdCode.appendChild(span);
+
+      var tdDate = el("td", null, new Date(t.createdAt).toLocaleString("pt-BR"));
+
+      var tdStatus = el("td");
+      var pill = el("span", "pill " + (t.used ? "pill-danger" : "pill-success"), t.used ? "Utilizada" : "Disponível");
+      tdStatus.appendChild(pill);
+
+      tr.appendChild(tdCode);
+      tr.appendChild(tdDate);
+      tr.appendChild(tdStatus);
+      body.appendChild(tr);
+    });
+  }
+
+  // ---------- candidates ----------
+  $("btn-toggle-candidate-form").addEventListener("click", function(){
+    var form = $("candidate-form");
+    form.hidden = !form.hidden;
+  });
+  $("btn-cancel-candidate-form").addEventListener("click", function(){
+    $("candidate-form").hidden = true;
+    $("candidate-form-error").hidden = true;
+    $("candidate-form").reset();
+  });
+
+  $("candidate-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var number = $("cand-number").value.trim();
+    var name = $("cand-name").value.trim();
+    var role = $("cand-role").value.trim();
+    var photo = $("cand-photo").value.trim();
+    var errBox = $("candidate-form-error");
+    errBox.hidden = true;
+
+    if(!number || !name || !role){
+      errBox.textContent = "Preencha número, nome e cargo.";
+      errBox.hidden = false;
+      return;
+    }
+    if(state.candidates.some(function(c){ return c.number === number; })){
+      errBox.textContent = "Já existe um candidato cadastrado com esse número.";
+      errBox.hidden = false;
+      return;
+    }
+    state.candidates.push({ number:number, name:name, role:role, photo:photo });
+    saveState();
+    $("candidate-form").reset();
+    $("candidate-form").hidden = true;
+    renderMesa();
+  });
+
+  function renderCandidatesTable(){
+    var body = $("candidates-table-body");
+    body.innerHTML = "";
+    if(state.candidates.length === 0){
+      var tr = el("tr","empty-row");
+      var td = el("td", null, "Nenhum candidato cadastrado ainda.");
+      td.colSpan = 5;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    state.candidates.forEach(function(c, idx){
+      var tr = document.createElement("tr");
+
+      var tdAvatar = el("td");
+      var avatar = el("div","avatar");
+      avatar.style.width = "32px"; avatar.style.height = "32px"; avatar.style.fontSize = ".7rem";
+      if(c.photo){
+        var img = document.createElement("img");
+        img.src = c.photo; img.alt = c.name;
+        avatar.appendChild(img);
+      } else {
+        avatar.textContent = initials(c.name);
+      }
+      tdAvatar.appendChild(avatar);
+
+      var tdNumber = el("td", "mono", c.number);
+      var tdName = el("td", null, c.name);
+      var tdRole = el("td", null, c.role);
+
+      var tdActions = el("td");
+      var btn = el("button","btn btn-danger", "Remover");
+      btn.style.padding = "6px 12px";
+      btn.style.fontSize = ".76rem";
+      btn.addEventListener("click", function(){
+        state.candidates.splice(idx,1);
+        saveState();
+        renderMesa();
+      });
+      tdActions.appendChild(btn);
+
+      tr.appendChild(tdAvatar);
+      tr.appendChild(tdNumber);
+      tr.appendChild(tdName);
+      tr.appendChild(tdRole);
+      tr.appendChild(tdActions);
+      body.appendChild(tr);
+    });
+  }
+
+  // ---------- extrato ----------
+  function renderExtrato(){
+    $("stat-total-votes").textContent = state.ledger.length;
+    $("stat-total-keys").textContent = state.tokens.length;
+    $("stat-total-candidates").textContent = state.candidates.length;
+
+    var tally = {};
+    state.candidates.forEach(function(c){ tally[c.number] = 0; });
+    state.ledger.forEach(function(b){
+      tally[b.candidateNumber] = (tally[b.candidateNumber] || 0) + 1;
+    });
+    var total = state.ledger.length;
+
+    var list = $("tally-list");
+    list.innerHTML = "";
+    state.candidates.forEach(function(c){
+      var count = tally[c.number] || 0;
+      var pct = total > 0 ? Math.round((count/total)*100) : 0;
+
+      var row = el("div","bar-row");
+      var label = el("div","bar-label", c.number + " · " + c.name);
+      var track = el("div","bar-track");
+      var fill = el("div","bar-fill");
+      fill.style.width = pct + "%";
+      track.appendChild(fill);
+      var countEl = el("div","bar-count", String(count));
+
+      row.appendChild(label);
+      row.appendChild(track);
+      row.appendChild(countEl);
+      list.appendChild(row);
+    });
+
+    var body = $("votes-table-body");
+    body.innerHTML = "";
+    if(state.ledger.length === 0){
+      var tr = el("tr","empty-row");
+      var td = el("td", null, "Nenhum voto registrado ainda.");
+      td.colSpan = 3;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    state.ledger.slice().reverse().forEach(function(b){
+      var cand = state.candidates.find(function(c){ return c.number === b.candidateNumber; });
+      var tr = document.createElement("tr");
+      tr.appendChild(el("td","mono", "#" + b.index));
+      tr.appendChild(el("td", null, new Date(b.timestamp).toLocaleString("pt-BR")));
+      tr.appendChild(el("td", null, cand ? (b.candidateNumber + " · " + cand.name) : (b.candidateNumber + " (removido)")));
+      body.appendChild(tr);
+    });
+  }
+
+  // ---------- ledger / blockchain ----------
+  function renderLedger(){
+    var body = $("ledger-table-body");
+    body.innerHTML = "";
+    if(state.ledger.length === 0){
+      var tr = el("tr","empty-row");
+      var td = el("td", null, "A blockchain local ainda não tem blocos. Registre um voto na aba Urna.");
+      td.colSpan = 5;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    state.ledger.forEach(function(b){
+      var tr = document.createElement("tr");
+      tr.appendChild(el("td","mono", "#" + b.index));
+      tr.appendChild(el("td", null, new Date(b.timestamp).toLocaleString("pt-BR")));
+
+      var tdPrev = el("td");
+      var spanPrev = el("span","hash mono", truncateHash(b.prevHash));
+      spanPrev.title = b.prevHash;
+      tdPrev.appendChild(spanPrev);
+
+      var tdCommit = el("td");
+      var spanCommit = el("span","hash mono", truncateHash(b.commitment));
+      spanCommit.title = b.commitment;
+      tdCommit.appendChild(spanCommit);
+
+      var tdHash = el("td");
+      var spanHash = el("span","hash mono", truncateHash(b.hash));
+      spanHash.title = b.hash;
+      tdHash.appendChild(spanHash);
+
+      tr.appendChild(tdPrev);
+      tr.appendChild(tdCommit);
+      tr.appendChild(tdHash);
+      body.appendChild(tr);
+    });
+  }
+
+  $("btn-verify-chain").addEventListener("click", async function(){
+    var statusBox = $("chain-status");
+    if(state.ledger.length === 0){
+      statusBox.hidden = false;
+      statusBox.className = "banner banner-danger";
+      statusBox.textContent = "Não há blocos para verificar ainda.";
+      return;
+    }
+    var broken = [];
+    var prevHash = "0".repeat(64);
+    for(var i=0;i<state.ledger.length;i++){
+      var b = state.ledger[i];
+      var recomputedHash = await sha256(b.index + "|" + b.prevHash + "|" + b.commitment + "|" + b.signature + "|" + b.timestamp);
+      var linkOk = b.prevHash === prevHash;
+      var hashOk = recomputedHash === b.hash;
+      if(!linkOk || !hashOk) broken.push(b.index);
+      prevHash = b.hash;
+    }
+    statusBox.hidden = false;
+    if(broken.length === 0){
+      statusBox.className = "banner banner-success";
+      statusBox.textContent = "Cadeia íntegra: " + state.ledger.length + " bloco(s) verificados, nenhuma adulteração detectada.";
+    } else {
+      statusBox.className = "banner banner-danger";
+      statusBox.textContent = "Adulteração detectada no(s) bloco(s): #" + broken.join(", #") + ".";
+    }
+  });
+
+  $("btn-tamper-chain").addEventListener("click", function(){
+    if(state.ledger.length === 0){ return; }
+    var idx = Math.floor(Math.random() * state.ledger.length);
+    state.ledger[idx].commitment = "0".repeat(64);
+    saveState();
+    renderMesa();
+    var statusBox = $("chain-status");
+    statusBox.hidden = false;
+    statusBox.className = "banner banner-danger";
+    statusBox.textContent = "Bloco #" + idx + " foi adulterado. Clique em \"Verificar integridade\" para confirmar a detecção.";
+  });
+
+  $("btn-reset-sim").addEventListener("click", function(){
+    state.tokens = [];
+    state.ledger = [];
+    saveState();
+    $("generated-key-box").hidden = true;
+    $("chain-status").hidden = true;
+    renderMesa();
+  });
+
+  function renderMesa(){
+    renderKeysTable();
+    renderCandidatesTable();
+    renderExtrato();
+    renderLedger();
+  }
+
+  // ---------- init ----------
+  resetUrna();
+  renderMesa();
+})();
+</script>
+</body>
+</html>
