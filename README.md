@@ -13,6 +13,7 @@
 
 > **Escopo da entrega:** este hackathon entrega o **projeto no repositório** (código, arquitetura e documentação) e a **ilustração do fluxo ideal de uso e dos casos de uso**. Não há demonstração física da urna — o hardware está especificado, mas a validação é feita em **modo simulação**.
 
+https://kydorpee.github.io/EleiXan/
 ---
 
 ## 📌 O problema
